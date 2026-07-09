@@ -93,5 +93,8 @@
       "module",
       "typescript"
     ]
+  },
+  "dependencies": {
+    "react-native-notify-kit": "^10.4.7"
   }
 }

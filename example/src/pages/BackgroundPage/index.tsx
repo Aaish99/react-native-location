@@ -8,6 +8,7 @@ import {
   OnErrorEvent,
   RNLocation,
 } from '@hyoper/rn-location';
+import notifee, {AndroidImportance} from 'react-native-notify-kit';
 import {Screen} from '../../commons/Screen';
 import {Button} from '../../commons/Button';
 import {CardLocation} from '../../commons/CardLocation';
@@ -19,7 +20,7 @@ const OPTIONS: ConfigureOptions = {
   ...CONFIGURE_OPTIONS,
   allowsBackgroundLocationUpdates: true,
   distanceFilter: 0,
-  notificationMandatory: false,
+  notificationMandatory: true, // ← Changed to true (required for reliable background)
   notification: {
     icon: 'ic_launcher',
     title: 'Location Service Running',
@@ -38,21 +39,77 @@ const OPTIONS: ConfigureOptions = {
     headingFilter: 0,
     headingOrientation: 'portrait',
     pausesLocationUpdatesAutomatically: false,
-    showsBackgroundLocationIndicator: false,
+    showsBackgroundLocationIndicator: true, // ← Show indicator on iOS
   },
 };
 
+// Notification channel ID
+const CHANNEL_ID = 'background-location';
+const NOTIFICATION_ID = 'background-location-status';
+
 export const BackgroundPage = ({back}: PageProps) => {
   const [location, setLocation] = useState<Location | null>(null);
-
   const [locationAllow, setLocationAllow] = useState(false);
   const [locationTracking, setLocationTracking] = useState(false);
+
+  // Create notification channel on mount (Android only)
+  useEffect(() => {
+    const createChannel = async () => {
+      await notifee.createChannel({
+        id: CHANNEL_ID,
+        name: 'Background Location',
+        importance: AndroidImportance.LOW,
+      });
+    };
+    createChannel();
+  }, []);
+
+  const displayNotification = async (loc?: Location) => {
+    await notifee.displayNotification({
+      id: NOTIFICATION_ID,
+      title: '📍 Background Location Active',
+      body: loc
+        ? `Lat: ${loc.latitude.toFixed(6)} | Lng: ${loc.longitude.toFixed(6)}`
+        : 'Tracking your location...',
+      android: {
+        channelId: CHANNEL_ID,
+        importance: AndroidImportance.LOW,
+        smallIcon: 'ic_stat_notification', // Use your app's notification icon
+        ongoing: true,        // ← Cannot be swiped away
+        autoCancel: false,    // ← Stays until explicitly cancelled
+        pressAction: {
+          id: 'open-app',
+        },
+      },
+    });
+  };
+
+  const updateNotification = async (loc: Location) => {
+    await notifee.displayNotification({
+      id: NOTIFICATION_ID, // Same ID = updates existing
+      title: '📍 Background Location Active',
+      body: `Lat: ${loc.latitude.toFixed(6)} | Lng: ${loc.longitude.toFixed(6)}`,
+      android: {
+        channelId: CHANNEL_ID,
+        importance: AndroidImportance.LOW,
+        smallIcon: 'ic_stat_notification',
+        ongoing: true,
+        autoCancel: false,
+      },
+    });
+  };
+
+  const clearNotification = async () => {
+    await notifee.cancelNotification(NOTIFICATION_ID);
+  };
 
   const onChange = useCallback<OnChangeEvent>(locations => {
     if (locations.length > 0) {
       const item = locations[0];
       setLocation(item);
       console.log(item);
+      // Update notification with live coordinates
+      updateNotification(item);
     }
   }, []);
 
@@ -60,25 +117,17 @@ export const BackgroundPage = ({back}: PageProps) => {
     console.log(error);
     switch (error.code) {
       case 'ERROR_SETUP':
-        // The installation instructions are incomplete.
-        // Permission information was not added, etc.
         break;
       case 'ERROR_PROVIDER':
-        // Location services are disabled.
         break;
       case 'ERROR_PERMISSION':
-        // Location "when-in-use" permission is not granted.
         break;
       case 'ERROR_PERMISSION_ALWAYS':
-        // Location "always" permission is not granted.
         break;
       case 'ERROR_PERMISSION_NOTIFICATION':
-        // Notification permission is not granted.
         break;
       case 'ERROR_UNKNOWN':
       default:
-        // Errors that may be returned by location services.
-        // Most of the time, they will only work during outages.
         break;
     }
   }, []);
@@ -100,10 +149,15 @@ export const BackgroundPage = ({back}: PageProps) => {
   useEffect(() => {
     if (!locationTracking) return;
 
+    // Show initial notification when tracking starts
+    displayNotification();
+
     const subscription = RNLocation.subscribe();
     subscription.onChange(onChange).onError(onError);
+
     return () => {
       subscription && subscription.unsubscribe();
+      clearNotification(); // Clean up notification when tracking stops
     };
   }, [locationTracking, onChange, onError]);
 
