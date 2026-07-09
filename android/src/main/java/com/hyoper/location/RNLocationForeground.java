@@ -29,6 +29,7 @@ public class RNLocationForeground extends Service {
     private static String notificationIcon = Notify.ICON;
     private static String notificationTitle = Notify.TITLE;
     private static String notificationContent = Notify.CONTENT;
+    private static boolean notificationOngoing = true; // new default
 
     private static RNLocationProvider provider = null;
     public static boolean providerWorking = false;
@@ -54,6 +55,13 @@ public class RNLocationForeground extends Service {
             notificationContent = map.getString("content");
         } else {
             notificationContent = Notify.CONTENT;
+        }
+
+        // NEW: honor the ongoing flag from JS
+        if (map != null && map.hasKey("ongoing") && map.getType("ongoing") == ReadableType.Boolean) {
+            notificationOngoing = map.getBoolean("ongoing");
+        } else {
+            notificationOngoing = true; // fallback to default
         }
     }
 
@@ -167,7 +175,9 @@ public class RNLocationForeground extends Service {
             .setContentTitle(notificationTitle)
             .setContentText(notificationContent)
             .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_LOW);
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(notificationOngoing)   // make it persistent when true
+            .setAutoCancel(false);             // avoid auto-cancel on tap
 
         return builder.build();
     }
