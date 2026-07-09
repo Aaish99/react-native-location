@@ -4,7 +4,7 @@
 
 ## 📍 About - @hyoper/rn-location 
 
-A **high-performance** React Native location library built with **New Architecture** and **TurboModules**. Provides reliable **foreground & background tracking**, simple **permission & GPS management**, and a clear, developer-friendly API. For full API documentation and usage examples, check out the [📖 API](https://hyoper.github.io/react-native-location/).
+A **high-performance** React Native location library built with **New Architecture** and **TurboModules**. Provides reliable **foreground & background tracking**, simple **permission & GPS management**, and a JS-friendly API that delegates heavy work to native code for Android and iOS.
 
 ## ✨ Features
 - Supports **Android** and **IOS** platforms.
@@ -14,6 +14,7 @@ A **high-performance** React Native location library built with **New Architectu
 - Help class for **managing GPS status**.
 - Configurations for **platform-based customization**.
 - Understandable and organized **error handling**.
+- Configurable foreground service notification on Android (persistence / dismissible).
 
 ---
 
@@ -40,6 +41,33 @@ This package works **only** with **React Native 0.75+** and **requires New Archi
   "react-native": ">=0.75.0"
 }
 ```
+
+## Notification persistence (Android)
+
+When running location tracking in the background, Android uses a foreground service and shows a notification to keep the process alive. This library exposes `notification` options in `RNLocation.configure(...)` and you can control whether the notification is explicitly persistent (non-dismissible) using the `notification.ongoing` option.
+
+- Platform: Android only. iOS posts a local notification to simulate foreground behavior and does not support an Android-style `ongoing` flag.
+- Default: `notification.ongoing` defaults to `true` in the library configuration (so notifications are persistent by default).
+
+Example:
+
+```ts
+RNLocation.configure({
+  allowsBackgroundLocationUpdates: true,
+  notificationMandatory: true,
+  notification: {
+    ongoing: true, // make notification persistent / non-dismissible while service runs
+    title: 'Tracking',
+    content: 'Location active',
+  }
+});
+
+RNLocation.subscribe();
+```
+
+If you change `notification` fields at runtime, call `RNLocation.configureWithRestart(...)` to restart the native service and apply the new notification values immediately.
+
+---
 
 ## 🧩 Example - Location Tracking
 This example demonstrates how to **configure RNLocation**, **subscribe to location updates**, handle **location changes**, manage **errors**, and **unsubscribe** when done. See examples for Foreground and Background location-tracking;
@@ -109,42 +137,3 @@ const Example = () => {
   return <></>;
 };
 ```
-
-## 🧩 Example - Location Get
-This example shows how to **retrieve the current location** with optional configuration, handle the resolved **location data**, and manage **errors** returned by the location request. See examples for location-get;
-- [📂 Current Example](https://github.com/HyopeR/react-native-location/tree/master/example/src/pages/CurrentPage/index.tsx)
-
-```typescript jsx
-import React, {useEffect} from 'react';
-import {RNLocation} from '@hyoper/rn-location';
-
-const Example = () => {
-  useEffect(() => {
-    // Retrieve current location information asynchronously.
-    // The configurations are completely optional.
-    // background: false -> requires the "when-in-use" permission.
-    // background: true -> requires the "always" permission.
-    RNLocation.getCurrent({
-      accuracy: 'high',
-      timeout: 10000,
-      background: false,
-    })
-      .then(location => {
-        // Use location information.
-        console.log(location);
-      })
-      .catch(error => {
-        // Display the error code and error message.
-        console.log(error);
-        console.log(error?.code);
-        console.log(error?.message);
-      });
-  }, []);
-
-  return <></>;
-};
-```
-
-## ℹ️ Fork
-Forked from the original [react-native-location](https://github.com/timfpark/react-native-location) repository. 
-Rewritten using TurboModule. Added new features and improved API experience.
