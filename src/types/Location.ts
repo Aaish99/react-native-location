@@ -112,4 +112,9 @@ export type LocationNotification = {
    * The content to display in the notification.
    */
   content?: string;
+  /**
+   * Whether the notification should be ongoing/non-dismissible while the service runs.
+   * @platform android
+   */
+  ongoing?: boolean;
 };
