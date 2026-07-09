@@ -15,6 +15,7 @@ export const CONFIGURE_OPTIONS: Required<ConfigureOptions> = {
     icon: 'ic_launcher',
     title: 'Location Service Running',
     content: 'Location is being used by the app.',
+    ongoing: true,
   },
   android: {
     priority: 'highAccuracy',
