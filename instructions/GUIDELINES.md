@@ -24,6 +24,7 @@ const OPTIONS = {
     icon: 'ic_launcher',
     title: 'Location Service Running',
     content: 'Location is being used by the app.',
+    ongoing: true, // new: controls whether Android notification is persistent
   },
   android: {
     priority: 'highAccuracy',
@@ -56,6 +57,16 @@ RNLocation.configure({android: {interval: 2000}});
 // Resulting internal configuration becomes:
 const options2 = {...OPTIONS, android: {...OPTIONS.android, interval: 2000}};
 ```
+
+### Android: Notification persistence (notification.ongoing)
+
+- The `notification.ongoing` boolean controls whether the Android foreground-service notification is explicitly marked as ongoing (non-dismissible) while the service runs.
+- Default: `notification.ongoing` defaults to `true` in the library configuration (so notifications are persistent by default).
+- Platform: Android only — iOS posts a local notification to simulate foreground behavior and does not support a direct ongoing flag.
+
+Runtime notes:
+- The notification map passed to `RNLocation.configure({ notification: { ... } })` is forwarded directly to native code.
+- To apply notification changes while the service is running, call `RNLocation.configureWithRestart(...)` to restart the native service so it re-reads the notification values.
 
 ### Subscription
 ```typescript ts
@@ -165,21 +176,4 @@ RNLocation.getCurrent({background: false})
 RNLocation.getCurrent({background: true})
   .then(location => console.log('Background:', location))
   .catch(error => console.log('Background error:', error));
-```
-
-### How to get "Always" location permission?
-```typescript ts
-// To obtain "always" permission on Android and iOS platforms, you must 
-// first obtain the "when-in-use" permission from the user.
-
-// If the user has granted "when-in-use" permission, you will have a chance to 
-// upgrade to "always."
-try {
-  const status = await RNLocation.permission.requestLocation();
-  console.log(status);
-  const statusAlways = await RNLocation.permission.requestLocationAlways();
-  console.log(statusAlways);
-} catch (error) {
-  console.log(error);
-}
 ```
